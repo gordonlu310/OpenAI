@@ -1,7 +1,5 @@
 package com.gordonlu.openai;
 
-import android.app.Activity;
-import android.content.Context;
 import com.google.appinventor.components.annotations.*;
 import com.google.appinventor.components.common.ComponentCategory;
 import com.google.appinventor.components.runtime.AndroidNonvisibleComponent;
