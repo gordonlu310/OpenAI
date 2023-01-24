@@ -2,7 +2,9 @@
 
 Do you want to chat with AI? Generate an image from your command? Well, this is the extension for you!
 
-![image](https://user-images.githubusercontent.com/88015331/214204579-fc1f349b-8fa6-4c17-aeed-3d7c96072152.png) ![image](https://user-images.githubusercontent.com/88015331/214204593-2ccf3137-805f-49fb-a824-12b8baccb7ae.png)
+![ba2072a71fca8c1f55c68dee06816baba3dbf8ba_2_656x500](https://user-images.githubusercontent.com/88015331/214205413-e5ba8337-5e37-42ff-b173-48c3ea18dfb2.jpeg)
+![image](https://user-images.githubusercontent.com/88015331/214205457-8459ae11-a024-4c49-b11c-7546f3a688e5.jpg)
+
 
 This is an extension that allows you to integrate OpenAI and GPT-3 with AppInventor. You can ask OpenAI questions, chat with it, and even generate images!
 
