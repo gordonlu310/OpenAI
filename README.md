@@ -11,7 +11,7 @@ This is an extension that allows you to integrate OpenAI and GPT-3 with AppInven
 
 **:hammer_and_wrench: Built with:** Extension Template
 
-**:calendar: Released on:** [date=2023-01-15 timezone="Asia/Hong_Kong"]
+**:calendar: Released on:** 2023-01-15
 
 **:clock1: Version:** 2
 
