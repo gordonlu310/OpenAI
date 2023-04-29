@@ -134,6 +134,77 @@ public class OpenAI extends AndroidNonvisibleComponent {
             }  
         });
     }
+	
+   @SimpleFunction(description = "Get response in chunks, with your query and your API key. Choose a model to talk to with the model parameter." +
+     " Higher values for the temperature parameter like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic." + 
+     " The temperature MUST be between 0 and 2 inclusively.\nStarting from version 4, you must input a model code instead of the model name from the OpenAI documentation." + 
+     " A model code corresponds to a model name. Find a list of model codes and their corresponding model names in the documentation.") 
+    public void Stream(final String prompt, final String model, final String apiKey, final int maxTokens, final double temperature) {
+		AsynchUtil.runAsynchronously(new Runnable() {
+            @Override
+            public void run () {
+				try {
+					if (models.get(model) == null) {
+						Error("No such model found for model code " + model + ". All possible codes are A1, A2, B1, B2, B3 and B4. Check the documentation for a list" + 
+						" of possible model codes that correspond with an OpenAI model.", "Chat");
+					} else {
+						final String mod = model;
+						URL url = new URL("https://api.openai.com/v1/chat/completions");
+						HttpURLConnection httpConn = (HttpURLConnection) url.openConnection();
+						httpConn.setRequestMethod("POST");
+						httpConn.setRequestProperty("Content-Type", "application/json");
+						httpConn.setRequestProperty("Authorization", "Bearer " + apiKey);
+						httpConn.setDoOutput(true);
+						OutputStreamWriter writer = new OutputStreamWriter(httpConn.getOutputStream());
+
+						JSONObject messageDict = new JSONObject();
+						messageDict.put("role", "user");
+						messageDict.put("content", prompt.replace("\"", "'"));
+
+						JSONArray message = new JSONArray();
+						message.put(messageDict);
+
+						JSONObject data = new JSONObject();
+						data.put("model", models.get(mod));
+						data.put("messages", message);
+						data.put("temperature", temperature);
+						data.put("max_tokens", maxTokens);
+						data.put("stream", true);
+
+						writer.write(data.toString());
+						writer.flush();
+						writer.close();
+						httpConn.getOutputStream().close();
+						
+						InputStream responseStream = httpConn.getResponseCode() / 100 == 2
+								? httpConn.getInputStream()
+								: httpConn.getErrorStream();
+
+						BufferedReader in = new BufferedReader(new InputStreamReader(responseStream));
+						StringBuilder response = new StringBuilder();
+
+						String inputLine;
+						while ((inputLine = in.readLine()) != null) {
+							response.append(inputLine);
+							// Here we pass the received data to the callback function
+							final String inputLineFinal = inputLine; //final variable to use in the Runnable
+							form.runOnUiThread(new Runnable() {
+								public void run() {
+								GotStream(inputLineFinal);
+								}
+							});
+						}
+
+						in.close();
+						httpConn.disconnect();
+					}
+				}  catch (Exception e) {
+					e.printStackTrace();
+					Error(e.getMessage(), "Chat");
+				}
+			}  
+		});
+	}
 
     @SimpleFunction(description = "Requests OpenAI to generate an image. The prompt is what the image should draw, such as a monkey holding a banana. " + 
     "The size parameter decides how large the output should be (in pixels); there are only three acceptable values, defined in the helper block Size.") 
@@ -201,6 +272,10 @@ public class OpenAI extends AndroidNonvisibleComponent {
     @SimpleEvent(description = "This event is fired when OpenAI has responded to your question from the Chat block!")
     public void RespondedToChat(String response, int tokensSpent) {
         EventDispatcher.dispatchEvent(this, "RespondedToChat", response, tokensSpent);
+    }
+    @SimpleEvent(description = "This event is fired when OpenAI has responded to your stream request")
+    public void GotStream(String response) {
+        EventDispatcher.dispatchEvent(this, "GotStream", response);
     }
 
     @SimpleEvent(description = "This event is fired when OpenAI has generated an image of your choice!")
