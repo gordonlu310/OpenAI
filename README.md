@@ -13,7 +13,7 @@ This is an extension that allows you to integrate OpenAI and GPT-3 with AppInven
 
 **:calendar: Released on:** 2023-01-15
 
-**:clock1: Version:** 4
+**:clock1: Version:** 5
 
 Please kindly read the AppInventor thread of this extension. Thank you.
 
