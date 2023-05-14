@@ -28,9 +28,9 @@ import org.json.JSONArray;
 
 import com.gordonlu.openai.helpers.Size;
 
-@DesignerComponent(version = 4, description = "An extension that allows you to use AI and connect with OpenAI. Created by Gordon.", iconName = "aiwebres/icon.png",
+@DesignerComponent(version = 5, description = "An extension that allows you to use AI and connect with OpenAI. Created by Gordon.", iconName = "aiwebres/icon.png",
  category = ComponentCategory.EXTENSION, nonVisible = true)
-@UsesLibraries(libraries = "json-20220924.jar")
+@UsesLibraries(libraries = "json-20230227.jar")
 @SimpleObject(external = true)
 
 public class OpenAI extends AndroidNonvisibleComponent {
@@ -378,78 +378,100 @@ public class OpenAI extends AndroidNonvisibleComponent {
         return false;
     }
    }
-}
 
 // new blocks added in V5
 
-   @SimpleFunction(description = "Get response in chunks, with your query and your API key. Choose a model to talk to with the model parameter." +
-     " Higher values for the temperature parameter like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic." + 
-     " The temperature MUST be between 0 and 2 inclusively.\nStarting from version 4, you must input a model code instead of the model name from the OpenAI documentation." + 
-     " A model code corresponds to a model name. Find a list of model codes and their corresponding model names in the documentation.") 
-    public void Stream(final String prompt, final String model, final String apiKey, final int maxTokens, final double temperature) {
-		AsynchUtil.runAsynchronously(new Runnable() {
+    @SimpleFunction(description = "Get response in chunks, with your query and your API key. Choose a model to talk to with the model parameter." +
+    " Higher values for the temperature parameter like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic." + 
+    " The temperature MUST be between 0 and 2 inclusively.\nStarting from version 4, you must input a model code instead of the model name from the OpenAI documentation." + 
+    " A model code corresponds to a model name. Find a list of model codes and their corresponding model names in the documentation. The ID parameter is just for you to keep track " +
+    " of the response; you can set it to any integer. The response won't be affected by the ID parameter.") 
+    public void Stream(final int id, final String prompt, final String model, final String apiKey, final int maxTokens, final double temperature) {
+        AsynchUtil.runAsynchronously(new Runnable() {
             @Override
             public void run () {
-		try {
-			if (models.get(model) == null) {
-				Error("No such model found for model code " + model + ". All possible codes are A1, A2, B1, B2, B3 and B4. Check the documentation for a list" + 
-				" of possible model codes that correspond with an OpenAI model.", "Chat");
-			} else {
-				final String mod = model;
-				URL url = new URL("https://api.openai.com/v1/chat/completions");
-				HttpURLConnection httpConn = (HttpURLConnection) url.openConnection();
-				httpConn.setRequestMethod("POST");
-				httpConn.setRequestProperty("Content-Type", "application/json");
-				httpConn.setRequestProperty("Authorization", "Bearer " + apiKey);
-				httpConn.setDoOutput(true);
-				OutputStreamWriter writer = new OutputStreamWriter(httpConn.getOutputStream());
+                try {
+                    if (models.get(model) == null) {
+                        Error("No such model found for model code " + model + ". All possible codes are A1, A2, B1, B2, B3 and B4. Check the documentation for a list" + 
+                        " of possible model codes that correspond with an OpenAI model.", "Stream");
+                    } else {
+                        final String mod = model;
+                        URL url = new URL("https://api.openai.com/v1/chat/completions");
+                        HttpURLConnection httpConn = (HttpURLConnection) url.openConnection();
+                        httpConn.setRequestMethod("POST");
+                        httpConn.setRequestProperty("Content-Type", "application/json");
+                        httpConn.setRequestProperty("Authorization", "Bearer " + apiKey);
+                        httpConn.setDoOutput(true);
+                        OutputStreamWriter writer = new OutputStreamWriter(httpConn.getOutputStream());
 
-				JSONObject messageDict = new JSONObject();
-				messageDict.put("role", "user");
-				messageDict.put("content", prompt.replace("\"", "'"));
+                        JSONObject messageDict = new JSONObject();
+                        messageDict.put("role", "user");
+                        messageDict.put("content", prompt.replace("\"", "'"));
 
-				JSONArray message = new JSONArray();
-				message.put(messageDict);
+                        JSONArray message = new JSONArray();
+                        message.put(messageDict);
 
-				JSONObject data = new JSONObject();
-				data.put("model", models.get(mod));
-				data.put("messages", message);
-				data.put("temperature", temperature);
-				data.put("max_tokens", maxTokens);
-				data.put("stream", true);
+                        JSONObject data = new JSONObject();
+                        data.put("model", models.get(mod));
+                        data.put("messages", message);
+                        data.put("temperature", temperature);
+                        data.put("max_tokens", maxTokens);
+                        data.put("stream", true);
 
-				writer.write(data.toString());
-				writer.flush();
-				writer.close();
-				httpConn.getOutputStream().close();
-						
-				InputStream responseStream = httpConn.getResponseCode() / 100 == 2 ? httpConn.getInputStream() : httpConn.getErrorStream();
+                        writer.write(data.toString());
+                        writer.flush();
+                        writer.close();
+                        httpConn.getOutputStream().close();
+                                
+                        InputStream responseStream = httpConn.getResponseCode() / 100 == 2 ? httpConn.getInputStream() : httpConn.getErrorStream();
 
-				BufferedReader in = new BufferedReader(new InputStreamReader(responseStream));
-				StringBuilder response = new StringBuilder();
+                        BufferedReader in = new BufferedReader(new InputStreamReader(responseStream));
+                        final StringBuilder response = new StringBuilder();
 
-				String inputLine;
-				while ((inputLine = in.readLine()) != null) {
-					response.append(inputLine);
-					final String inputLineFinal = inputLine; //final variable to use in the Runnable
-					form.runOnUiThread(new Runnable() {
-						public void run() {
-							GotStream(inputLineFinal);
-							}
-						});
-					}
-					in.close();
-					httpConn.disconnect();
-				}
-			}  catch (Exception e) {
-				e.printStackTrace();
-				Error(e.getMessage(), "Chat");
-			}
-		}  
-	});
-}
+                        String inputLine;
+                        while ((inputLine = in.readLine()) != null) {
+                            response.append(inputLine);
+                            final String inputLineFinal = inputLine;
+                            form.runOnUiThread(new Runnable() {
+                                public void run() {
+                                    try {
+                                        String json = inputLineFinal;
+                                        if (inputLineFinal.startsWith("data: ")) {
+                                            json = json.substring(6);
+                                        }
+
+                                        if (json != "[DONE]" && !json.isEmpty() && !json.startsWith("[")) {
+                                            JSONObject rawData = new JSONObject(json);
+                                            if (rawData.has("error")) {
+                                                String output = rawData.getJSONObject("error").getString("message");
+                                                Error(output, "Stream");
+                                            } else {
+                                                JSONObject deltaData = rawData.getJSONArray("choices").getJSONObject(0).getJSONObject("delta");
+                                                if (deltaData.has("content")) {
+                                                    GotStream(id, deltaData.getString("content"));
+                                                };
+                                            }
+                                        }
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                        Error(e.getMessage(), "Stream");
+                                    }
+                                }
+                            });
+                        }
+                        in.close();
+                        httpConn.disconnect();
+                    }
+                }  catch (Exception e) {
+                    e.printStackTrace();
+                    Error(e.getMessage(), "Stream");
+                }
+            }  
+        });
+    }
 
     @SimpleEvent(description = "This event is fired when OpenAI has responded to your stream request.")
-    public void GotStream(String response) {
-        EventDispatcher.dispatchEvent(this, "GotStream", response);
+    public void GotStream(int id, String response) {
+        EventDispatcher.dispatchEvent(this, "GotStream", id, response);
     }
+}
