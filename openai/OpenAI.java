@@ -27,6 +27,7 @@ import org.json.JSONObject;
 import org.json.JSONArray;
 
 import com.gordonlu.openai.helpers.Size;
+import com.gordonlu.openai.helpers.Role;
 
 @DesignerComponent(version = 5, description = "An extension that allows you to use AI and connect with OpenAI. Created by Gordon.", iconName = "aiwebres/icon.png",
  category = ComponentCategory.EXTENSION, nonVisible = true)
@@ -51,8 +52,9 @@ public class OpenAI extends AndroidNonvisibleComponent {
     @SimpleFunction(description = "Chats with the OpenAI bot, with your query and your API key. Choose a model to talk to with the model parameter." +
      " Higher values for the temperature parameter like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic." + 
      " The temperature MUST be between 0 and 2 inclusively.\nStarting from version 4, you must input a model code instead of the model name from the OpenAI documentation." + 
-     " A model code corresponds to a model name. Find a list of model codes and their corresponding model names in the documentation.") 
-    public void Chat(final String prompt, final String model, final String apiKey, final int maxTokens, final double temperature) {
+     " A model code corresponds to a model name. Find a list of model codes and their corresponding model names in the documentation. The role parameter specifies the role " + 
+     "of the user - do you want to talk to the OpenAI bot as a user or an assistant?") 
+    public void Chat(final String prompt, final String model, final String apiKey, final int maxTokens, final double temperature, @Options(Role.class) final String role) {
 		AsynchUtil.runAsynchronously(new Runnable() {
             @Override
             public void run () {
@@ -71,7 +73,7 @@ public class OpenAI extends AndroidNonvisibleComponent {
                         OutputStreamWriter writer = new OutputStreamWriter(httpConn.getOutputStream());
     
                         JSONObject messageDict = new JSONObject();
-                        messageDict.put("role", "user");
+                        messageDict.put("role", role);
                         messageDict.put("content", prompt.replace("\"", "'"));
     
                         JSONArray message = new JSONArray();
@@ -379,14 +381,16 @@ public class OpenAI extends AndroidNonvisibleComponent {
     }
    }
 
-// new blocks added in V5
+    // new blocks added in V5
 
-    @SimpleFunction(description = "Get response in chunks, with your query and your API key. Choose a model to talk to with the model parameter." +
+    @SimpleFunction(description = "Similar to Chat but gets response in chunks, with your query and your API key. Choose a model to talk to with the model parameter." +
     " Higher values for the temperature parameter like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic." + 
     " The temperature MUST be between 0 and 2 inclusively.\nStarting from version 4, you must input a model code instead of the model name from the OpenAI documentation." + 
     " A model code corresponds to a model name. Find a list of model codes and their corresponding model names in the documentation. The ID parameter is just for you to keep track " +
-    " of the response; you can set it to any integer. The response won't be affected by the ID parameter.") 
-    public void Stream(final int id, final String prompt, final String model, final String apiKey, final int maxTokens, final double temperature) {
+    " of the response; you can set it to any integer. The response won't be affected by the ID parameter." + 
+    " A model code corresponds to a model name. Find a list of model codes and their corresponding model names in the documentation. The role parameter specifies the role " + 
+    "of the user - do you want to talk to the OpenAI bot as a user or an assistant?") 
+    public void Stream(final int id, final String prompt, final String model, final String apiKey, final int maxTokens, final double temperature, @Options(Role.class) final String role) {
         AsynchUtil.runAsynchronously(new Runnable() {
             @Override
             public void run () {
@@ -405,7 +409,7 @@ public class OpenAI extends AndroidNonvisibleComponent {
                         OutputStreamWriter writer = new OutputStreamWriter(httpConn.getOutputStream());
 
                         JSONObject messageDict = new JSONObject();
-                        messageDict.put("role", "user");
+                        messageDict.put("role", role);
                         messageDict.put("content", prompt.replace("\"", "'"));
 
                         JSONArray message = new JSONArray();
@@ -451,7 +455,10 @@ public class OpenAI extends AndroidNonvisibleComponent {
                                                     GotStream(id, deltaData.getString("content"));
                                                 };
                                             }
+                                        } else if (json.startsWith("[") && json.contains("DONE")) {
+                                            FinishedStream();
                                         }
+
                                     } catch (Exception e) {
                                         e.printStackTrace();
                                         Error(e.getMessage(), "Stream");
@@ -470,8 +477,13 @@ public class OpenAI extends AndroidNonvisibleComponent {
         });
     }
 
-    @SimpleEvent(description = "This event is fired when OpenAI has responded to your stream request.")
+    @SimpleEvent(description = "This event is fired when OpenAI has responded to your stream request. The response parameter is the responded chunk.")
     public void GotStream(int id, String response) {
         EventDispatcher.dispatchEvent(this, "GotStream", id, response);
+    }
+
+    @SimpleEvent(description = "This event is fired when all chunks of the stream are returned via the GotStream event.")
+    public void FinishedStream() {
+        EventDispatcher.dispatchEvent(this, "FinishedStream");
     }
 }
